@@ -1,53 +1,65 @@
-💰 Crypto Price Automation & Excel Logger | ثبت خودکار قیمت رمزارزها
+# 💰 Crypto Price Automation & Excel Logger | اتوماسیون دریافت قیمت ارز دیجیتال
 
-A Python automation project that continuously fetches live cryptocurrency prices from the CoinGecko API and logs them into a CSV file.
-Supports multiple coins (BTC, ETH, ADA, DOGE, SOL) and automatically appends data at each interval.
+A Python script that automatically fetches cryptocurrency prices from the CoinGecko API at regular intervals and saves them into a CSV file.  
+Supports multiple coins and appends new data automatically.
 
-پروژه‌ای برای اتوماسیون دریافت قیمت لحظه‌ای رمزارزها از طریق API سایت CoinGecko و ذخیره در فایل CSV.
-برنامه در فواصل زمانی معین اجرا می‌شود و قیمت‌ها را به‌صورت خودکار در فایل اضافه می‌کند.
+یک اسکریپت پایتون برای دریافت خودکار قیمت رمزارزها از API سایت CoinGecko و ذخیره آن‌ها در فایل CSV.  
+چندین ارز را می‌توان دنبال کرد و اطلاعات جدید به صورت خودکار به فایل اضافه می‌شود.
 
-⸻
+---
 
-🧠 Technologies Used | تکنولوژی‌های استفاده‌شده
- • Python 3.10+
- • requests → برای دریافت داده از API
- • pandas → برای ساخت و ذخیره DataFrame
- • datetime / time / os → برای مدیریت زمان و فایل‌ها
+## 🧠 Technologies Used | تکنولوژی‌های استفاده‌شده
 
-⸻
+- Python 3.10+ – زبان برنامه‌نویسی  
+- requests – ارتباط با API و دریافت داده  
+- pandas – پردازش و ذخیره داده‌ها در CSV  
+- datetime / timezone – مدیریت تاریخ و زمان  
+- time / os – کنترل فاصله زمانی و مدیریت فایل  
 
-⚙️ How It Works | نحوه کار
- 1. با استفاده از requests داده‌های قیمت از CoinGecko API گرفته می‌شود.
- 2. هر ۶۰ ثانیه (قابل تنظیم) درخواست جدید ارسال می‌شود.
- 3. داده‌ها شامل زمان، نام ارز و قیمت در قالب CSV ذخیره می‌شوند.
- 4. در صورت بسته بودن فایل اصلی، داده‌ها در فایل جدید ذخیره می‌شوند.
- 5. در صورت قطع اتصال اینترنت، اسکریپت منتظر مانده و مجدداً تلاش می‌کند.
+---
 
-⸻
+## ⚙️ How It Works | نحوه عملکرد
 
-🧩 Key Code Structure | ساختار اصلی کد
+1️⃣ تعریف لیست ارزها (`bitcoin, ethereum, cardano, dogecoin, solana`) و واحد پول (`USD`).  
+2️⃣ درخواست قیمت‌ها از CoinGecko API در فواصل زمانی مشخص (مثلاً هر 60 ثانیه).  
+3️⃣ دریافت پاسخ و تبدیل آن به فرمت DataFrame با pandas.  
+4️⃣ ذخیره داده‌ها در فایل CSV اصلی و اضافه کردن ردیف‌های جدید.  
+5️⃣ مدیریت خطاها مانند قطع ارتباط اینترنت و عدم دسترسی به فایل.  
 
-# Define main file & parameters
+---
+
+## 🧩 Key Code Structure | ساختار اصلی کد
+
+```python
+import requests
+import pandas as pd
+from datetime import datetime, timezone
+import time
+import os
+
 main_file = "crypto_prices.csv"
 coins = 'bitcoin,ethereum,cardano,dogecoin,solana'
 vs_currency = 'usd'
-interval = 60  # seconds
+interval = 60  # هر 60 ثانیه
 
 while True:
     try:
-        # Fetch live prices
+        # درخواست قیمت‌ها از CoinGecko API
         url = 'https://api.coingecko.com/api/v3/simple/price'
         params = {'ids': coins, 'vs_currencies': vs_currency}
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url=url, params=params, timeout=10)
         data = response.json()
 
-        # Store results with timestamp
         now = datetime.now(timezone.utc)
-        rows = [{'Datatime': now, 'Coin': c, 'Price': data[c][vs_currency]} for c in data]
-
-        # Save to CSV (append mode)
+        rows = []
+        for coin in data:
+            rows.append({'Datetime': now, 'Coin': coin, 'Price': data[coin][vs_currency]})
+        
         df = pd.DataFrame(rows)
+        # ذخیره در CSV و اضافه کردن ردیف‌های جدید
         df.to_csv(main_file, mode='a', index=False, header=not os.path.exists(main_file))
-    except:
-        time.sleep(10)
+
+    except requests.exceptions.ConnectionError:
+        time.sleep(10)  # انتظار در صورت قطع اینترنت
+    
     time.sleep(interval)
